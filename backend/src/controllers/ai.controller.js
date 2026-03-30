@@ -1,6 +1,6 @@
 // backend/src/controllers/ai.controller.js
 
-const { askClaude, askClaudeJSON } = require('../services/gemini.service');
+const { askClaude, askClaudeJSON } = require('../services/groq.service');
 const Transaction = require('../models/Transaction.model');
 const Category    = require('../models/Category.model');
 const User        = require('../models/User.model');

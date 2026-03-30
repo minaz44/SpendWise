@@ -7,7 +7,7 @@ const requiredEnvVars = [
   'MONGODB_NAME',
   'JWT_SECRET',
   'JWT_EXPIRES_IN',
-  'GEMINI_API_KEY',
+  'GROQ_API_KEY',
   'FRONTEND_URL',
 ];
 
@@ -39,11 +39,9 @@ const env = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN,
   },
 
-  // ✅ Switched to Gemini
-  gemini: {
-    apiKey:    process.env.GEMINI_API_KEY,
-    model:     process.env.GEMINI_MODEL     || 'gemini-1.5-flash',
-    maxTokens: parseInt(process.env.GEMINI_MAX_TOKENS || '2048', 10),
+  groq: {
+    apiKey: process.env.GROQ_API_KEY,
+    model:  'llama-3.3-70b-versatile',
   },
 
   frontend: {
@@ -51,8 +49,8 @@ const env = {
   },
 
   rateLimit: {
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS      || '900000', 10),
-    max:      parseInt(process.env.RATE_LIMIT_MAX_REQUESTS   || '100',    10),
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS    || '900000', 10),
+    max:      parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100',    10),
   },
 
   upload: {
