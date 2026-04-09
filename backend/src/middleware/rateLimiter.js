@@ -1,47 +1,60 @@
 // backend/src/middleware/rateLimiter.js
 
-const rateLimit = require('express-rate-limit');
+const rateLimit          = require('express-rate-limit');
 const { ipKeyGenerator } = require('express-rate-limit');
-const { env } = require('../config/env');
+const { env }            = require('../config/env');
 
-// General API limiter
-const generalLimiter = rateLimit({
-  windowMs: env.rateLimit.windowMs,
-  max: env.rateLimit.max,
+const generalLimiter = process.env.NODE_ENV === 'test'
+  ? (req, res, next) => next()
+  : rateLimit({
+      windowMs: env.rateLimit.windowMs,
+      max: env.rateLimit.max,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { success: false, message: 'Too many requests. Please try again later.' },
+    });
+
+const authLimiter = process.env.NODE_ENV === 'test'
+  ? (req, res, next) => next()  // passthrough in tests
+  : rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 10,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { success: false, message: 'Too many login attempts. Please try again in 15 minutes.' },
+    });
+
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max:      10,
   standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: 'Too many requests. Please try again later.',
-  },
+  legacyHeaders:   false,
+  message: { success: false, message: 'Too many AI requests. Please wait a moment.' },
 });
 
-// Strict limiter for auth routes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max:      20,
   standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: 'Too many login attempts. Please try again in 15 minutes.',
-  },
+  legacyHeaders:   false,
+  message: { success: false, message: 'Upload limit reached. Try again in 1 hour.' },
 });
 
-// Business API limiter (uses API key tier — expanded in Stage 11)
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max:      20,
+  standardHeaders: true,
+  legacyHeaders:   false,
+  message: { success: false, message: 'Too many payment requests. Please wait.' },
+});
+
 const apiPlatformLimiter = rateLimit({
-  windowMs: 24 * 60 * 60 * 1000, // 24 hours
-  max: env.apiPlatform.freeTierDailyLimit,
-  keyGenerator: (req) => {
-    // Use API key if present, otherwise fall back to IPv6-safe IP
-    return req.headers['x-api-key'] || ipKeyGenerator(req);
-  },
+  windowMs:     24 * 60 * 60 * 1000,
+  max:          env.apiPlatform.freeTierDailyLimit,
+  keyGenerator: (req) => req.headers['x-api-key'] || ipKeyGenerator(req),
   standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: 'Daily API limit reached. Upgrade your plan for more requests.',
-  },
+  legacyHeaders:   false,
+  message: { success: false, message: 'Daily API limit reached. Upgrade your plan.' },
 });
 
-module.exports = { generalLimiter, authLimiter, apiPlatformLimiter };
+module.exports = { generalLimiter, authLimiter, aiLimiter, uploadLimiter, paymentLimiter, apiPlatformLimiter };

@@ -57,13 +57,13 @@ const apiKeySchema = new mongoose.Schema(
 );
 
 // Generate API key before saving
-apiKeySchema.pre('save', function (next) {
+// ✅ FIXED
+apiKeySchema.pre('save', function () {
   if (!this.key) {
     const rawKey = `sw_live_${crypto.randomBytes(24).toString('hex')}`;
     this.key = rawKey;
     this.keyPreview = rawKey.slice(0, 16) + '...';
   }
-  next();
 });
 
 // Reset daily usage

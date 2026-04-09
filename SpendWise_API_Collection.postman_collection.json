@@ -1,0 +1,1005 @@
+{
+  "info": {
+    "name": "SpendWise API — Complete Collection",
+    "description": "All SpendWise API endpoints — Stages 1-13",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "apiKey",
+      "value": ""
+    },
+    {
+      "key": "transactionId",
+      "value": ""
+    },
+    {
+      "key": "groupId",
+      "value": ""
+    },
+    {
+      "key": "splitId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('accessToken', pm.response.json().data.accessToken); pm.collectionVariables.set('refreshToken', pm.response.json().data.refreshToken); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/register",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@spendwise.com\",\n  \"password\": \"Test@1234\",\n  \"currency\": \"INR\",\n  \"monthlyIncome\": 50000\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) { pm.collectionVariables.set('accessToken', pm.response.json().data.accessToken); pm.collectionVariables.set('refreshToken', pm.response.json().data.refreshToken); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@spendwise.com\",\n  \"password\": \"Test@1234\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/me",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/auth/profile",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"monthlyIncome\": 60000\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/refresh",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/logout",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "💰 Transactions",
+      "item": [
+        {
+          "name": "Create Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('transactionId', pm.response.json().data.transaction._id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/transactions",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"expense\",\n  \"amount\": 500,\n  \"merchant\": \"Swiggy\",\n  \"categoryName\": \"Food & Dining\",\n  \"paymentMethod\": \"upi\",\n  \"date\": \"2026-04-01T12:00:00.000Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Transactions",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions?page=1&limit=10",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Transaction",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions/{{transactionId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Update Transaction",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/transactions/{{transactionId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 750,\n  \"notes\": \"Updated amount\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions/stats",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Summary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions/summary?month=4&year=2026",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Delete Transaction",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/transactions/{{transactionId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "🤖 Automation",
+      "item": [
+        {
+          "name": "Parse SMS",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/automation/sms/parse",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Rs.500 debited from SBI a/c XX1234 via UPI to swiggy@icici. Ref: TXN123456789012.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create from SMS",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/automation/sms/create",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Rs.800 debited from HDFC a/c via UPI to amazon@icici. Ref: TXN987654321098.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "SMS Status",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/automation/sms/status",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "OCR from URL",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/automation/ocr/url/extract",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imageUrl\": \"https://res.cloudinary.com/sample/image/upload/receipt.jpg\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🧠 AI Engine",
+      "item": [
+        {
+          "name": "Categorize",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/ai/categorize",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchant\": \"Swiggy\",\n  \"amount\": 350,\n  \"type\": \"expense\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Analysis",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/ai/analysis?month=4&year=2026",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Insights",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/ai/insights",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Recommendations",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/ai/recommendations",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Financial Score",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/ai/score",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Chat",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/ai/chat",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Where am I spending the most money?\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Predict Budget",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/ai/advanced/predict-budget",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Anomaly Detection",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/ai/advanced/anomalies",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Subscriptions",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/ai/advanced/subscriptions",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Forecast",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/ai/advanced/forecast?months=3",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Score History",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/ai/advanced/score-history",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "💳 Payments",
+      "item": [
+        {
+          "name": "Budget Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/payments/budget-check?amount=500&categoryName=Food",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/payments/order",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500,\n  \"description\": \"Test Payment\",\n  \"categoryName\": \"Food\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Payment Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/payments/stats",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "History",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/payments/history",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Groups",
+      "item": [
+        {
+          "name": "Create Group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('groupId', pm.response.json().data.group._id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/groups",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Goa Trip\",\n  \"type\": \"trip\",\n  \"currency\": \"INR\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Groups",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/groups",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Group",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/groups/{{groupId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Add Split",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('splitId', pm.response.json().data.split._id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/groups/{{groupId}}/splits",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Hotel Booking\",\n  \"totalAmount\": 3000,\n  \"splitType\": \"equal\",\n  \"category\": \"Travel\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Balances",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/groups/{{groupId}}/balances",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Analytics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/groups/{{groupId}}/analytics",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "⛓️ Blockchain",
+      "item": [
+        {
+          "name": "Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/blockchain/stats",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Audit All",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/blockchain/audit-all",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Verify Chain",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/blockchain/verify-chain",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Audit Trail",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/blockchain/trail",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Verify Txn",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/blockchain/verify/{{transactionId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Proof",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/blockchain/proof/{{transactionId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔌 API Platform",
+      "item": [
+        {
+          "name": "Get Tiers",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/platform/tiers",
+            "header": []
+          }
+        },
+        {
+          "name": "Create API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('apiKey', pm.response.json().data.key); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/platform/keys",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My App Key\",\n  \"tier\": \"growth\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Keys",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/platform/keys",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/platform/dashboard",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "V1 Categories",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/platform/v1/categories",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "V1 Categorize",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/platform/v1/categorize",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchant\": \"Netflix\",\n  \"amount\": 649\n}"
+            }
+          }
+        },
+        {
+          "name": "V1 Analyze",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/platform/v1/analyze",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"INR\",\n  \"transactions\": [\n    { \"type\": \"expense\", \"amount\": 500, \"category\": \"Food\" },\n    { \"type\": \"income\",  \"amount\": 50000, \"category\": \"Salary\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "V1 Score",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/platform/v1/score",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"totalIncome\": 50000,\n  \"totalExpense\": 32000,\n  \"transactionCount\": 45\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔔 Notifications",
+      "item": [
+        {
+          "name": "Budget Alerts",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/notifications/budget-alerts",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Weekly Summary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/notifications/weekly-summary",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Anomaly Alerts",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/notifications/anomaly-alerts",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "⚙️ System",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        },
+        {
+          "name": "Metrics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/metrics"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+/* frontend/src/components/FoxMascot.css */
+
+.fox-mascot {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  transition: transform var(--transition-spring, 0.5s cubic-bezier(0.34,1.56,0.64,1));
+  flex-shrink: 0;
+}
+
+.fox-mascot:hover {
+  transform: scale(1.15);
+}
+
+.fox-mascot--happy {
+  animation: foxBounce 0.4s ease;
+}
+
+.fox-mascot--surprised {
+  animation: foxJolt 0.3s ease;
+}
+
+@keyframes foxBounce {
+  0%,100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-4px) scale(1.05); }
+}
+
+@keyframes foxJolt {
+  0%,100% { transform: scale(1); }
+  25%     { transform: scale(1.1) rotate(-3deg); }
+  75%     { transform: scale(1.1) rotate(3deg); }
+}
+
+.fox-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 8px rgba(29,158,117,0.3));
+  transition: filter var(--transition-fast, 0.12s ease);
+}
+
+.fox-mascot:hover .fox-svg {
+  filter: drop-shadow(0 0 14px rgba(29,158,117,0.6));
+}
+
+.fox-bubble {
+  position: absolute;
+  top: -18px;
+  right: -8px;
+  font-size: 14px;
+  animation: bubblePop 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  pointer-events: none;
+}
+
+@keyframes bubblePop {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}

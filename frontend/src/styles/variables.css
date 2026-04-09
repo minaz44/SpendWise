@@ -1,88 +1,53 @@
+/* frontend/src/styles/variables.css */
+
 :root {
-  /* ───────── COLORS ───────── */
-
-  --color-primary: #6366F1;          /* Indigo (modern fintech) */
-  --color-primary-dark: #4F46E5;
-  --color-primary-light: #EEF2FF;
-
-  --color-success: #10B981;
-  --color-danger: #EF4444;
-  --color-warning: #F59E0B;
-  --color-info: #3B82F6;
-
-  /* Backgrounds */
-  --color-bg: #F8FAFC;               /* soft gray (premium) */
-  --color-surface: #FFFFFF;
-  --color-surface-2: #F1F5F9;
-
-  /* Borders */
-  --color-border: rgba(0, 0, 0, 0.06);
-  --color-border-strong: rgba(0, 0, 0, 0.12);
-
-  /* Text */
-  --color-text-primary: #0F172A;
-  --color-text-secondary: #475569;
-  --color-text-muted: #94A3B8;
-  --color-text-inverse: #FFFFFF;
-
-  /* ───────── SPACING ───────── */
-
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-
-  /* ───────── RADIUS ───────── */
-
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-full: 9999px;
-
-  /* ───────── SHADOWS (IMPORTANT) ───────── */
-
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md: 0 6px 20px rgba(0,0,0,0.08);
-  --shadow-lg: 0 10px 40px rgba(0,0,0,0.12);
-
-  /* ───────── FONTS ───────── */
-
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
-
-  /* ───────── TRANSITIONS ───────── */
-
-  --transition-fast: 0.15s ease;
-  --transition-base: 0.25s ease;
-  --transition-slow: 0.4s ease;
-
-  /* Layout */
-  --sidebar-width: 250px;
-  --header-height: 64px;
+  --color-primary:       #1D9E75;
+  --color-primary-dark:  #0F6E52;
+  --color-primary-light: rgba(29,158,117,0.12);
+  --color-primary-glow:  rgba(29,158,117,0.25);
+  --color-success: #1D9E75;
+  --color-danger:  #FF6B6B;
+  --color-warning: #FFB547;
+  --color-info:    #4DA6FF;
+  --color-bg:         #0D0D0D;
+  --color-bg-2:       #111111;
+  --color-surface:    #161616;
+  --color-surface-2:  #1E1E1E;
+  --color-surface-3:  #252525;
+  --color-border:         rgba(255,255,255,0.07);
+  --color-border-strong:  rgba(255,255,255,0.14);
+  --color-text-primary:   #F0F0F0;
+  --color-text-secondary: #A0A0A0;
+  --color-text-muted:     #505050;
+  --gradient-primary: linear-gradient(135deg,#1D9E75,#0F6E52);
+  --gradient-mesh:
+    radial-gradient(at 20% 20%, rgba(29,158,117,0.07) 0, transparent 50%),
+    radial-gradient(at 80% 10%, rgba(77,166,255,0.05) 0, transparent 50%);
+  --shadow-sm:   0 1px 4px  rgba(0,0,0,0.4);
+  --shadow-md:   0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg:   0 12px 40px rgba(0,0,0,0.6);
+  --shadow-glow: 0 0 20px rgba(29,158,117,0.25);
+  --space-1:4px;  --space-2:8px;   --space-3:12px;
+  --space-4:16px; --space-5:20px;  --space-6:24px;
+  --space-8:32px; --space-10:40px; --space-12:48px;
+  --radius-sm:6px; --radius-md:10px; --radius-lg:14px;
+  --radius-xl:18px; --radius-2xl:24px; --radius-full:9999px;
+  --font-sans:'Syne','DM Sans',system-ui,sans-serif;
+  --font-display:'Syne',sans-serif;
+  --transition-fast:0.12s ease;
+  --transition-base:0.22s ease;
+  --transition-slow:0.4s ease;
+  --transition-spring:0.5s cubic-bezier(0.34,1.56,0.64,1);
+  --sidebar-width:260px;
+  --header-height:60px;
 }
 
-/* 🌙 DARK MODE (REAL PRODUCT LEVEL) */
-
-[data-theme="dark"] {
-  --color-bg: #020617;
-  --color-surface: #0F172A;
-  --color-surface-2: #1E293B;
-
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-strong: rgba(255, 255, 255, 0.15);
-
-  --color-text-primary: #F8FAFC;
-  --color-text-secondary: #CBD5F5;
-  --color-text-muted: #64748B;
-
-  --color-primary-light: #1E1B4B;
-
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
-  --shadow-md: 0 6px 20px rgba(0,0,0,0.5);
-  --shadow-lg: 0 10px 40px rgba(0,0,0,0.6);
+[data-theme="light"] {
+  --color-bg:#F2F2F0; --color-bg-2:#EBEBEA;
+  --color-surface:#FFFFFF; --color-surface-2:#F5F5F3; --color-surface-3:#EEEEEC;
+  --color-border:rgba(0,0,0,0.07); --color-border-strong:rgba(0,0,0,0.14);
+  --color-text-primary:#111111; --color-text-secondary:#555555; --color-text-muted:#999999;
+  --shadow-sm:0 1px 4px rgba(0,0,0,0.08); --shadow-md:0 4px 16px rgba(0,0,0,0.10);
+  --shadow-lg:0 12px 40px rgba(0,0,0,0.12); --shadow-glow:0 0 20px rgba(29,158,117,0.15);
+  --gradient-mesh: radial-gradient(at 20% 20%,rgba(29,158,117,0.05) 0,transparent 50%);
 }
