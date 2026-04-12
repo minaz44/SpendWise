@@ -26,6 +26,11 @@ body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
+select option {
+  background-color: #111827;
+  color: #ffffff;
+}
+
 #root {
   min-height: 100vh;
 }

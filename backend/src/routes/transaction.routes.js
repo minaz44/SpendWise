@@ -11,6 +11,7 @@ const {
   deleteTransaction,
   getSummary,
   getStats,
+  categorizeTransaction,   // ← NEW
 } = require('../controllers/transaction.controller');
 
 const { protect } = require('../middleware/auth.middleware');
@@ -20,14 +21,17 @@ const {
   getTransactionsValidator,
 } = require('../middleware/validators/transaction.validator');
 
-// All transaction routes are protected
+// All routes protected
 router.use(protect);
 
-// Stats + summary (before /:id to avoid conflict)
+// ── AI Categorization (before /:id to avoid conflict) ──
+router.post('/categorize', categorizeTransaction);
+
+// ── Stats + Summary ──
 router.get('/stats',   getStats);
 router.get('/summary', getSummary);
 
-// CRUD
+// ── CRUD ──
 router.get('/',    ...getTransactionsValidator, getTransactions);
 router.post('/',   ...createTransactionValidator, createTransaction);
 router.get('/:id',    getTransaction);

@@ -152,6 +152,9 @@ app.use('/api/blockchain',    require('./routes/blockchain.routes'));           
 app.use('/api/platform',      require('./routes/platform.routes'));                    // Stage 11
 app.use('/api/notifications', require('./routes/notification.routes'));                // Stage 12
 
+const friendRoutes = require('./routes/friend.routes');
+app.use('/api/friends', friendRoutes);
+
 //─────────────────────────────────────
 // ERROR HANDLING
 //─────────────────────────────────────

@@ -1,236 +1,430 @@
 // frontend/src/pages/Friends.jsx
 
-import React, { useState, useEffect } from 'react';
-import { Users, TrendingUp, TrendingDown, Search, UserPlus, X, Mail, Phone } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Users, TrendingUp, TrendingDown, Search, UserPlus,
+  X, Check, UserMinus, Clock, RefreshCw,
+} from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import './Friends.css';
 
-const fmt = (v) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v);
+const fmt = (v) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v || 0);
 
-// ── Invite Modal ─────────────────────────────────────────────────────────────
-const InviteModal = ({ groupId, groupName, onClose }) => {
-  const [method,  setMethod]  = useState('email');
-  const [value,   setValue]   = useState('');
-  const [loading, setLoading] = useState(false);
+// ── Add Friend Modal ──────────────────────────────────────────────────────────
+const AddFriendModal = ({ onClose, onRequestSent }) => {
+  const [query,    setQuery]    = useState('');
+  const [results,  setResults]  = useState([]);
+  const [email,    setEmail]    = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [sending,  setSending]  = useState(null); // userId being sent
+  const [tab,      setTab]      = useState('search'); // 'search' | 'email'
 
-  const handleInvite = async () => {
-    if (!value.trim()) { toast.error('Please enter an email or phone'); return; }
+  const searchUsers = useCallback(async (q) => {
+    if (!q || q.trim().length < 2) { setResults([]); return; }
     setLoading(true);
     try {
-      if (groupId) {
-        await api.post(`/groups/${groupId}/members`, {
-          email: method === 'email' ? value : undefined,
-          phone: method === 'sms'   ? value : undefined,
-          name:  value.split('@')[0],
-        });
-        toast.success(`Invitation sent to ${value}!`);
-      } else {
-        // Friend request without group
-        toast.success(`Invitation sent to ${value}! (Feature coming soon)`);
-      }
+      const res = await api.get(`/friends/search?q=${encodeURIComponent(q.trim())}`);
+      setResults(res.data.users || []);
+    } catch { setResults([]); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => searchUsers(query), 400);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const sendByUserId = async (userId, name) => {
+    setSending(userId);
+    try {
+      // Get their email from search results and use the friend request endpoint
+      await api.post('/friends/request', { email: results.find(r => r._id === userId)?.email });
+      toast.success(`Friend request sent to ${name}!`);
+      setResults(prev => prev.map(r => r._id === userId ? { ...r, status: 'requested' } : r));
+      onRequestSent?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send request');
+    } finally { setSending(null); }
+  };
+
+  const sendByEmail = async () => {
+    if (!email.trim()) { toast.error('Enter an email address'); return; }
+    setSending('email');
+    try {
+      const res = await api.post('/friends/request', { email: email.trim() });
+      toast.success(res.data.message || 'Friend request sent!');
+      setEmail('');
+      onRequestSent?.();
       onClose();
     } catch (err) {
-      toast.error(err.message || 'Failed to send invite');
-    } finally { setLoading(false); }
+      toast.error(err.response?.data?.message || 'Failed to send request');
+    } finally { setSending(null); }
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal__header">
-          <h2>Add Friend {groupName ? `to ${groupName}` : ''}</h2>
-          <button className="modal__close" onClick={onClose}><X size={18} /></button>
+    <div className="fr-overlay" onClick={onClose}>
+      <div className="fr-modal" onClick={e => e.stopPropagation()}>
+        <div className="fr-modal__hdr">
+          <h2>Add Friend</h2>
+          <button className="fr-icon-btn" onClick={onClose}><X size={16}/></button>
         </div>
-        <div className="modal__form">
-          <div className="invite-method-tabs">
-            <button className={`invite-tab ${method === 'email' ? 'active' : ''}`}
-              onClick={() => setMethod('email')}>
-              <Mail size={14} /> Email
-            </button>
-            <button className={`invite-tab ${method === 'sms' ? 'active' : ''}`}
-              onClick={() => setMethod('sms')}>
-              <Phone size={14} /> SMS
-            </button>
-          </div>
 
-          <div className="form-group">
-            <label>{method === 'email' ? 'Email Address' : 'Phone Number'}</label>
-            <input
-              className="form-input"
-              type={method === 'email' ? 'email' : 'tel'}
-              value={value}
-              onChange={e => setValue(e.target.value)}
-              placeholder={method === 'email' ? 'friend@example.com' : '+91 9876543210'}
-              onKeyDown={e => e.key === 'Enter' && handleInvite()}
-              autoFocus
-            />
-          </div>
+        {/* Tabs */}
+        <div className="fr-tabs">
+          <button className={`fr-tab ${tab === 'search' ? 'active' : ''}`} onClick={() => setTab('search')}>
+            🔍 Search Users
+          </button>
+          <button className={`fr-tab ${tab === 'email' ? 'active' : ''}`} onClick={() => setTab('email')}>
+            📧 Send by Email
+          </button>
+        </div>
 
-          <p className="invite-note">
-            {method === 'email'
-              ? '📧 An invitation link will be sent to their email'
-              : '📱 An SMS invitation will be sent to their phone'}
-          </p>
+        <div className="fr-modal__body">
+          {tab === 'search' ? (
+            <>
+              <div className="fr-search-wrap">
+                <Search size={15} className="fr-search-ico"/>
+                <input
+                  className="fr-search-input"
+                  placeholder="Search by name or email..."
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  autoFocus
+                />
+                {loading && <div className="fr-spin-sm"/>}
+              </div>
 
-          <div className="modal__footer">
-            <button className="btn btn--ghost" onClick={onClose}>Cancel</button>
-            <button className="btn btn--primary" onClick={handleInvite} disabled={loading}>
-              {loading ? 'Sending...' : 'Send Invitation'}
-            </button>
-          </div>
+              <div className="fr-results">
+                {results.length === 0 && query.length >= 2 && !loading && (
+                  <div className="fr-empty-sm">No users found. Try sending by email instead.</div>
+                )}
+                {results.map(u => (
+                  <div key={u._id} className="fr-result-row">
+                    <div className="fr-avatar">{u.initials || u.name?.slice(0,2).toUpperCase()}</div>
+                    <div className="fr-result-info">
+                      <span className="fr-result-name">{u.name}</span>
+                      <span className="fr-result-email">{u.email}</span>
+                    </div>
+                    {u.status === 'friend' ? (
+                      <span className="fr-badge fr-badge--friend">✓ Friends</span>
+                    ) : u.status === 'requested' ? (
+                      <span className="fr-badge fr-badge--pending"><Clock size={11}/> Sent</span>
+                    ) : (
+                      <button
+                        className="fr-btn fr-btn--primary fr-btn--sm"
+                        disabled={sending === u._id}
+                        onClick={() => sendByUserId(u._id, u.name)}
+                      >
+                        {sending === u._id ? '...' : <><UserPlus size={13}/> Add</>}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="fr-field">
+                <label>Email Address</label>
+                <input
+                  className="fr-input"
+                  type="email"
+                  placeholder="friend@example.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && sendByEmail()}
+                  autoFocus
+                />
+              </div>
+              <p className="fr-note">📧 A friend request notification will be sent to their email</p>
+              <button
+                className="fr-btn fr-btn--primary"
+                style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem' }}
+                onClick={sendByEmail}
+                disabled={sending === 'email'}
+              >
+                {sending === 'email' ? 'Sending...' : 'Send Friend Request'}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-// ── Friends Page ─────────────────────────────────────────────────────────────
+// ── Main Friends Page ─────────────────────────────────────────────────────────
 const Friends = () => {
-  const { user } = useAuth();
-  const [groups,   setGroups]   = useState([]);
-  const [friends,  setFriends]  = useState([]); // derived from group balances
+  const { user }   = useAuth();
+  const [tab,      setTab]      = useState('friends');  // friends | requests | balances
+  const [friends,  setFriends]  = useState([]);
+  const [requests, setRequests] = useState({ received: [], sent: [] });
+  const [balances, setBalances] = useState([]);         // aggregated from groups
   const [search,   setSearch]   = useState('');
   const [loading,  setLoading]  = useState(true);
-  const [showInvite, setShowInvite] = useState(false);
+  const [showAdd,  setShowAdd]  = useState(false);
+  const [acting,   setActing]   = useState(null);       // userId being acted on
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const groupsRes = await api.get('/groups');
-        const groupList = groupsRes.data.groups || [];
-        setGroups(groupList);
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [friendsRes, reqRes, groupsRes] = await Promise.all([
+        api.get('/friends'),
+        api.get('/friends/requests'),
+        api.get('/groups'),
+      ]);
 
-        // Fetch balances for each group and aggregate by friend
-        const friendMap = {};
-        await Promise.all(groupList.map(async (g) => {
-          try {
-            const balRes = await api.get(`/groups/${g._id}/balances`);
-            const { iOwe = [], owedToMe = [] } = balRes.data;
+      setFriends(friendsRes.data.friends || []);
+      setRequests(reqRes.data || { received: [], sent: [] });
 
-            iOwe.forEach(d => {
-              const key = d.to;
-              if (!friendMap[key]) friendMap[key] = { name: key, owes: 0, owedToMe: 0, groups: [] };
-              friendMap[key].owes += d.amount;
-              if (!friendMap[key].groups.includes(g.name)) friendMap[key].groups.push(g.name);
-            });
-
-            owedToMe.forEach(d => {
-              const key = d.from;
-              if (!friendMap[key]) friendMap[key] = { name: key, owes: 0, owedToMe: 0, groups: [] };
-              friendMap[key].owedToMe += d.amount;
-              if (!friendMap[key].groups.includes(g.name)) friendMap[key].groups.push(g.name);
-            });
-          } catch {}
-        }));
-
-        setFriends(Object.values(friendMap));
-      } catch { toast.error('Failed to load friends'); }
-      finally { setLoading(false); }
-    };
-    fetchData();
+      // Aggregate balances from all groups
+      const groupList  = groupsRes.data.groups || [];
+      const balanceMap = {};
+      await Promise.all(groupList.map(async (g) => {
+        try {
+          const b = await api.get(`/groups/${g._id}/balances`);
+          const { iOwe = [], owedToMe = [] } = b.data;
+          iOwe.forEach(d => {
+            if (!balanceMap[d.to]) balanceMap[d.to] = { name: d.to, owes: 0, owedToMe: 0, groups: [] };
+            balanceMap[d.to].owes += d.amount;
+            if (!balanceMap[d.to].groups.includes(g.name)) balanceMap[d.to].groups.push(g.name);
+          });
+          owedToMe.forEach(d => {
+            if (!balanceMap[d.from]) balanceMap[d.from] = { name: d.from, owes: 0, owedToMe: 0, groups: [] };
+            balanceMap[d.from].owedToMe += d.amount;
+            if (!balanceMap[d.from].groups.includes(g.name)) balanceMap[d.from].groups.push(g.name);
+          });
+        } catch {}
+      }));
+      setBalances(Object.values(balanceMap));
+    } catch { toast.error('Failed to load friends data'); }
+    finally { setLoading(false); }
   }, []);
 
-  const filtered = friends.filter(f =>
-    f.name.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const totalOwed   = friends.reduce((s, f) => s + f.owes, 0);
-  const totalOwedMe = friends.reduce((s, f) => s + f.owedToMe, 0);
+  const accept = async (userId, name) => {
+    setActing(userId);
+    try {
+      await api.post(`/friends/accept/${userId}`);
+      toast.success(`You are now friends with ${name}! 🎉`);
+      fetchAll();
+    } catch { toast.error('Failed to accept request'); }
+    finally { setActing(null); }
+  };
+
+  const reject = async (userId) => {
+    setActing(userId);
+    try {
+      await api.post(`/friends/reject/${userId}`);
+      toast.success('Request declined');
+      fetchAll();
+    } catch { toast.error('Failed to decline request'); }
+    finally { setActing(null); }
+  };
+
+  const removeFriend = async (userId, name) => {
+    if (!window.confirm(`Remove ${name} from friends?`)) return;
+    setActing(userId);
+    try {
+      await api.delete(`/friends/${userId}`);
+      toast.success(`${name} removed from friends`);
+      fetchAll();
+    } catch { toast.error('Failed to remove friend'); }
+    finally { setActing(null); }
+  };
+
+  const filteredFriends  = friends.filter(f  => f.name.toLowerCase().includes(search.toLowerCase()));
+  const totalOwed        = balances.reduce((s, b) => s + b.owes,      0);
+  const totalOwedMe      = balances.reduce((s, b) => s + b.owedToMe,  0);
+  const pendingCount     = requests.received?.length || 0;
 
   return (
-    <div className="friends-page">
+    <div className="fr-page">
       {/* Header */}
-      <div className="page-header">
+      <div className="fr-page__hdr">
         <div>
-          <h1 className="page-title">Friends</h1>
-          <p className="page-subtitle">Track shared expenses with friends</p>
+          <h1 className="fr-title">Friends</h1>
+          <p className="fr-sub">Connect and split expenses with friends</p>
         </div>
-        <button className="btn btn--primary" onClick={() => setShowInvite(true)}>
-          <UserPlus size={16} /> Add Friend
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="fr-btn fr-btn--ghost fr-btn--sm" onClick={fetchAll}>
+            <RefreshCw size={14}/>
+          </button>
+          <button className="fr-btn fr-btn--primary" onClick={() => setShowAdd(true)}>
+            <UserPlus size={15}/> Add Friend
+          </button>
+        </div>
       </div>
 
-      {/* Summary */}
-      <div className="friends-summary">
-        <div className={`summary-card summary-card--${totalOwedMe > totalOwed ? 'positive' : 'negative'}`}>
-          <div className="summary-card__icon">
-            {totalOwedMe >= totalOwed ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+      {/* Balance Summary */}
+      <div className="fr-summary-row">
+        <div className={`fr-sum-card ${totalOwedMe >= totalOwed ? 'fr-sum-card--pos' : 'fr-sum-card--neg'}`}>
+          <div className="fr-sum-card__icon">
+            {totalOwedMe >= totalOwed ? <TrendingUp size={20}/> : <TrendingDown size={20}/>}
           </div>
           <div>
-            <div className="summary-card__label">Overall Balance</div>
-            <div className="summary-card__value">
+            <div className="fr-sum-card__lbl">Overall Balance</div>
+            <div className="fr-sum-card__val">
               {totalOwedMe >= totalOwed
                 ? `You are owed ${fmt(totalOwedMe - totalOwed)}`
-                : `You owe ${fmt(totalOwed - totalOwedMe)}`
-              }
+                : `You owe ${fmt(totalOwed - totalOwedMe)}`}
             </div>
           </div>
         </div>
-
-        <div className="summary-pills">
-          <div className="summary-pill summary-pill--danger">
-            <TrendingDown size={14} />
-            <span>You owe {fmt(totalOwed)}</span>
-          </div>
-          <div className="summary-pill summary-pill--success">
-            <TrendingUp size={14} />
-            <span>Owed to you {fmt(totalOwedMe)}</span>
-          </div>
+        <div className="fr-sum-pills">
+          <div className="fr-pill fr-pill--neg"><TrendingDown size={13}/> You owe {fmt(totalOwed)}</div>
+          <div className="fr-pill fr-pill--pos"><TrendingUp size={13}/>  Owed to you {fmt(totalOwedMe)}</div>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="search-box">
-        <Search size={16} />
-        <input placeholder="Search friends..."
-          value={search} onChange={e => setSearch(e.target.value)} />
-        {search && <button onClick={() => setSearch('')}><X size={14} /></button>}
+      {/* Tabs */}
+      <div className="fr-tabs fr-tabs--page">
+        <button className={`fr-tab-page ${tab === 'friends' ? 'active' : ''}`} onClick={() => setTab('friends')}>
+          👥 Friends ({friends.length})
+        </button>
+        <button className={`fr-tab-page ${tab === 'requests' ? 'active' : ''}`} onClick={() => setTab('requests')}>
+          🔔 Requests {pendingCount > 0 && <span className="fr-badge-count">{pendingCount}</span>}
+        </button>
+        <button className={`fr-tab-page ${tab === 'balances' ? 'active' : ''}`} onClick={() => setTab('balances')}>
+          ⚖️ Balances
+        </button>
       </div>
 
-      {/* Friends List */}
-      {loading ? (
-        Array(4).fill(0).map((_, i) => <div key={i} className="friend-row skeleton-row" />)
-      ) : filtered.length === 0 ? (
-        <div className="empty-state">
-          <Users size={32} />
-          <h3>{search ? 'No friends found' : 'No friends yet'}</h3>
-          <p>{search ? 'Try a different search' : 'Create groups and split expenses to see friends here'}</p>
-          {!search && (
-            <button className="btn btn--primary" onClick={() => setShowInvite(true)}>
-              <UserPlus size={16} /> Add Friend
-            </button>
+      {/* ── Friends Tab ── */}
+      {tab === 'friends' && (
+        <>
+          {friends.length > 0 && (
+            <div className="fr-search-wrap" style={{ marginBottom: '0.75rem' }}>
+              <Search size={15} className="fr-search-ico"/>
+              <input className="fr-search-input" placeholder="Search friends..."
+                value={search} onChange={e => setSearch(e.target.value)} />
+              {search && <button style={{ background:'none',border:'none',cursor:'pointer',color:'var(--color-text-secondary)' }} onClick={() => setSearch('')}><X size={14}/></button>}
+            </div>
           )}
+
+          <div className="fr-card">
+            {loading ? (
+              Array(3).fill(0).map((_, i) => <div key={i} className="fr-skeleton"/>)
+            ) : filteredFriends.length === 0 ? (
+              <div className="fr-empty">
+                <Users size={32}/>
+                <h3>{search ? 'No friends match your search' : 'No friends yet'}</h3>
+                <p>{search ? 'Try a different name' : 'Add friends to split expenses together'}</p>
+                {!search && (
+                  <button className="fr-btn fr-btn--primary" onClick={() => setShowAdd(true)}>
+                    <UserPlus size={15}/> Add Your First Friend
+                  </button>
+                )}
+              </div>
+            ) : filteredFriends.map(f => (
+              <div key={f._id} className="fr-friend-row">
+                <div className="fr-avatar">{f.initials || f.name?.slice(0,2).toUpperCase()}</div>
+                <div className="fr-friend-info">
+                  <span className="fr-friend-name">{f.name}</span>
+                  <span className="fr-friend-email">{f.email}</span>
+                </div>
+                <div className="fr-friend-actions">
+                  <span className="fr-badge fr-badge--friend">✓ Friends</span>
+                  <button
+                    className="fr-icon-btn fr-icon-btn--danger"
+                    title="Remove friend"
+                    disabled={acting === f._id}
+                    onClick={() => removeFriend(f._id, f.name)}
+                  >
+                    <UserMinus size={14}/>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ── Requests Tab ── */}
+      {tab === 'requests' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+          {/* Received */}
+          <div className="fr-card">
+            <h3 className="fr-section-title">Received ({requests.received?.length || 0})</h3>
+            {!requests.received?.length ? (
+              <div className="fr-empty-sm">No pending friend requests</div>
+            ) : requests.received.map(r => (
+              <div key={r.from._id} className="fr-friend-row">
+                <div className="fr-avatar">{r.from.initials || r.from.name?.slice(0,2).toUpperCase()}</div>
+                <div className="fr-friend-info">
+                  <span className="fr-friend-name">{r.from.name}</span>
+                  <span className="fr-friend-email">{r.from.email}</span>
+                </div>
+                <div className="fr-friend-actions">
+                  <button
+                    className="fr-btn fr-btn--primary fr-btn--sm"
+                    disabled={acting === r.from._id}
+                    onClick={() => accept(r.from._id, r.from.name)}
+                  >
+                    <Check size={13}/> Accept
+                  </button>
+                  <button
+                    className="fr-btn fr-btn--ghost fr-btn--sm"
+                    disabled={acting === r.from._id}
+                    onClick={() => reject(r.from._id)}
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Sent */}
+          <div className="fr-card">
+            <h3 className="fr-section-title">Sent ({requests.sent?.length || 0})</h3>
+            {!requests.sent?.length ? (
+              <div className="fr-empty-sm">No outgoing requests</div>
+            ) : requests.sent.map(r => (
+              <div key={r.to._id} className="fr-friend-row">
+                <div className="fr-avatar">{r.to.initials || r.to.name?.slice(0,2).toUpperCase()}</div>
+                <div className="fr-friend-info">
+                  <span className="fr-friend-name">{r.to.name}</span>
+                  <span className="fr-friend-email">{r.to.email}</span>
+                </div>
+                <span className="fr-badge fr-badge--pending"><Clock size={11}/> Pending</span>
+              </div>
+            ))}
+          </div>
         </div>
-      ) : (
-        <div className="friends-list">
-          {filtered.map((friend, i) => {
-            const net = friend.owedToMe - friend.owes;
+      )}
+
+      {/* ── Balances Tab ── */}
+      {tab === 'balances' && (
+        <div className="fr-card">
+          <h3 className="fr-section-title">Balances from all groups</h3>
+          {balances.length === 0 ? (
+            <div className="fr-empty-sm">No group balances yet. Create groups and add expenses.</div>
+          ) : balances.map((b, i) => {
+            const net = b.owedToMe - b.owes;
             return (
-              <div key={i} className="friend-row">
-                <div className="friend-row__avatar">
-                  {friend.name.slice(0, 2).toUpperCase()}
+              <div key={i} className="fr-balance-row">
+                <div className="fr-avatar">{b.name.slice(0,2).toUpperCase()}</div>
+                <div className="fr-friend-info">
+                  <span className="fr-friend-name">{b.name}</span>
+                  <span className="fr-friend-email">{b.groups.join(', ')}</span>
                 </div>
-                <div className="friend-row__info">
-                  <span className="friend-row__name">{friend.name}</span>
-                  <span className="friend-row__groups">
-                    {friend.groups.join(', ')}
-                  </span>
-                </div>
-                <div className="friend-row__balance">
+                <div className="fr-balance-val">
                   {net === 0 ? (
-                    <span className="balance-settled">✓ Settled up</span>
+                    <span className="fr-badge fr-badge--friend">✓ Settled</span>
                   ) : net > 0 ? (
-                    <div>
-                      <span className="balance-positive">owes you</span>
-                      <span className="balance-amount balance-amount--positive">{fmt(net)}</span>
+                    <div style={{ textAlign: 'right' }}>
+                      <div className="fr-bal-label pos">owes you</div>
+                      <div className="fr-bal-amount pos">{fmt(net)}</div>
                     </div>
                   ) : (
-                    <div>
-                      <span className="balance-negative">you owe</span>
-                      <span className="balance-amount balance-amount--negative">{fmt(Math.abs(net))}</span>
+                    <div style={{ textAlign: 'right' }}>
+                      <div className="fr-bal-label neg">you owe</div>
+                      <div className="fr-bal-amount neg">{fmt(Math.abs(net))}</div>
                     </div>
                   )}
                 </div>
@@ -240,35 +434,10 @@ const Friends = () => {
         </div>
       )}
 
-      {/* Groups quick view */}
-      {groups.length > 0 && !search && (
-        <div className="groups-quick">
-          <h3 className="section-title">Your Groups</h3>
-          <div className="groups-quick-list">
-            {groups.map(g => (
-              <div key={g._id} className="group-quick-item">
-                <span className="group-quick-icon">
-                  {{ trip:'✈️', flat:'🏠', office:'💼', family:'👨‍👩‍👧', event:'🎉', other:'👥' }[g.type] || '👥'}
-                </span>
-                <div className="group-quick-info">
-                  <span className="group-quick-name">{g.name}</span>
-                  <span className="group-quick-members">{g.members?.length} members</span>
-                </div>
-                <button className="btn btn--ghost btn--sm"
-                  onClick={() => setShowInvite({ groupId: g._id, groupName: g.name })}>
-                  <UserPlus size={14} /> Invite
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {showInvite && (
-        <InviteModal
-          groupId={typeof showInvite === 'object' ? showInvite.groupId : null}
-          groupName={typeof showInvite === 'object' ? showInvite.groupName : null}
-          onClose={() => setShowInvite(false)}
+      {showAdd && (
+        <AddFriendModal
+          onClose={() => setShowAdd(false)}
+          onRequestSent={() => { fetchAll(); }}
         />
       )}
     </div>

@@ -11,7 +11,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import './Groups.css';
+import '../styles/Groups.css';
 
 const fmt = (v) => new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 }).format(v||0);
 const TYPE_ICONS = { trip:'✈️', flat:'🏠', office:'💼', family:'👨‍👩‍👧', event:'🎉', other:'👥' };

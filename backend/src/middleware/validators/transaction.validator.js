@@ -83,6 +83,7 @@ const updateTransactionValidator = [
 
   body('paymentMethod')
     .optional()
+    .customSanitizer(value => value ? value.toLowerCase() : value)
     .isIn(['upi', 'cash', 'card', 'netbanking', 'wallet', 'cheque', 'other'])
     .withMessage('Invalid payment method.'),
 
