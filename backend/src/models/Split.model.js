@@ -41,10 +41,23 @@ const splitSchema = new mongoose.Schema(
 
     // Blockchain
     blockchainData: {
-      txHash:      { type: String, default: null },
-      blockNumber: { type: Number, default: null },
+      txHash:         { type: String,  default: null },
+      blockNumber:    { type: Number,  default: null },
       settledOnChain: { type: Boolean, default: false },
     },
+
+    // ── Bill image (uploaded receipt / invoice) ───────────────────────────────
+    billImage: { type: String, default: null },
+
+    // ── Comments thread ───────────────────────────────────────────────────────
+    comments: [
+      {
+        userId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        userName:  { type: String, required: true },
+        text:      { type: String, required: true, maxlength: 1000 },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
     timestamps: true,
