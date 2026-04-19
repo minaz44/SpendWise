@@ -14,8 +14,14 @@ const splitSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+
+    // ── FIX: store the payer's display name so list endpoints don't need
+    // a population join. Backfilled in getSplits() for older documents. ──────
+    paidByName: { type: String, default: null },
+
     title:       { type: String, required: true, trim: true },
     description: { type: String, default: null },
+    notes:       { type: String, default: null },
     totalAmount: { type: Number, required: true, min: 0.01 },
     currency:    { type: String, default: 'INR' },
     category:    { type: String, default: 'General' },
@@ -46,10 +52,12 @@ const splitSchema = new mongoose.Schema(
       settledOnChain: { type: Boolean, default: false },
     },
 
-    // ── Bill image (uploaded receipt / invoice) ───────────────────────────────
-    billImage: { type: String, default: null },
+    // Bill image (uploaded receipt / invoice)
+    billImage:     { type: String, default: null },
+    billUrl:       { type: String, default: null },
+    billOrigName:  { type: String, default: null },
 
-    // ── Comments thread ───────────────────────────────────────────────────────
+    // Comments thread
     comments: [
       {
         userId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -75,6 +83,7 @@ splitSchema.virtual('pendingAmount').get(function () {
 splitSchema.index({ groupId: 1, date: -1 });
 splitSchema.index({ paidBy: 1 });
 splitSchema.index({ 'shares.userId': 1 });
+splitSchema.index({ groupId: 1, isSettled: 1 }); // used by getBalances filter
 
 const Split = mongoose.model('Split', splitSchema);
 module.exports = Split;

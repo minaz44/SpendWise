@@ -57,7 +57,7 @@ const transactionSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ['manual', 'sms', 'ocr', 'csv', 'pdf', 'razorpay', 'api'],
+      enum: ['manual', 'sms', 'ocr', 'csv', 'pdf', 'razorpay', 'api', 'group'], // ← 'group' added
       default: 'manual',
     },
 
@@ -118,6 +118,24 @@ const transactionSchema = new mongoose.Schema(
       default: null,
     },
 
+    // ── GROUP EXPENSE TRACKING ──────────────────────────────────────────────
+    // true when this transaction was auto-created from a group split payment
+    isGroupExpense: {
+      type: Boolean,
+      default: false,
+    },
+    // Stores split details so the dashboard can show "you'll get back ₹X"
+    groupExpenseMeta: {
+      groupId:          { type: mongoose.Schema.Types.ObjectId, ref: 'Group',  default: null },
+      groupName:        { type: String,  default: null },
+      splitId:          { type: mongoose.Schema.Types.ObjectId, ref: 'Split',  default: null },
+      splitTitle:       { type: String,  default: null },
+      amountToGetBack:  { type: Number,  default: 0 },   // what others owe the payer
+      myShare:          { type: Number,  default: 0 },   // payer's personal portion
+      memberCount:      { type: Number,  default: 0 },   // total people in the split
+    },
+    // ────────────────────────────────────────────────────────────────────────
+
     // Recurring detection
     isRecurring: { type: Boolean, default: false },
     recurringId: {
@@ -158,6 +176,8 @@ transactionSchema.index({ 'paymentData.razorpayPaymentId': 1 });
 transactionSchema.index({ groupId: 1 });
 transactionSchema.index({ isRecurring: 1 });
 transactionSchema.index({ tags: 1 });
+transactionSchema.index({ isGroupExpense: 1 });                    // ← NEW
+transactionSchema.index({ 'groupExpenseMeta.groupId': 1 });        // ← NEW
 
 // Virtual: formatted amount
 transactionSchema.virtual('formattedAmount').get(function () {

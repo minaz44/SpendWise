@@ -28,11 +28,18 @@ const {
   deleteComment,
   uploadBill,
   deleteBill,
+  getOwedSummary,   // ← NEW
 } = require('../controllers/split.controller');
 
 const { protect } = require('../middleware/auth.middleware');
 
 router.use(protect);
+
+//─────────────────────────────────────
+// Dashboard summary — MUST be before /:id so Express doesn't treat
+// "owed-summary" as a group ID param
+//─────────────────────────────────────
+router.get('/owed-summary', getOwedSummary);   // ← NEW
 
 //─────────────────────────────────────
 // Group routes

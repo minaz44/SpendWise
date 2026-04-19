@@ -1162,8 +1162,20 @@ const BalancesTab = ({ balances, group, currentUser, loading }) => {
     </div>
   );
   if (!balances) return <div className="g-empty"><p>No balance data.</p></div>;
-  const memberDebts = balances.memberBalances || [];
+
+  // ── Build per-member balance rows from iOwe / owedToMe / netBalances ──────
+  // API shape: { data: { myBalance, iOwe, owedToMe, allDebts, netBalances } }
+  const allDebts    = balances.allDebts    || [];
+  const netBalances = balances.netBalances || {};
+
+  const memberDebts = group.members?.map(member => {
+    const uid = member.userId?.toString();
+    const net = netBalances[uid] ?? 0;
+    return { userId: uid, name: member.name, netBalance: net };
+  }) || [];
+
   const toggle = id => setExpanded(p => ({ ...p, [id]: !p[id] }));
+
   return (
     <div className="gsb-wrap">
       {memberDebts.length === 0 ? (
@@ -1172,11 +1184,14 @@ const BalancesTab = ({ balances, group, currentUser, loading }) => {
           <p style={{ color: '#22c55e', fontWeight: 700 }}>Everyone is settled up! 🎉</p>
         </div>
       ) : memberDebts.map((member, i) => {
-        const isYou = member.userId?.toString() === currentUser._id?.toString();
+        const isYou = member.userId === currentUser._id?.toString();
         const net   = member.netBalance || 0;
         const isExp = expanded[member.userId || i];
-        const owes  = (balances.settlements || []).filter(s => s.from?.toString() === member.userId?.toString());
-        const owed  = (balances.settlements || []).filter(s => s.to?.toString()   === member.userId?.toString());
+        const owes  = allDebts.filter(s => s.from === member.userId);
+        const owed  = allDebts.filter(s => s.to   === member.userId);
+
+        if (net === 0 && owes.length === 0 && owed.length === 0) return null;
+
         return (
           <div key={i} className="gsb-member-block">
             <button className="gsb-member-row" onClick={() => (owes.length + owed.length) > 0 && toggle(member.userId || i)}>
@@ -1228,6 +1243,22 @@ const BalancesTab = ({ balances, group, currentUser, loading }) => {
 // ─── Group Detail ─────────────────────────────────────────────────────────────
 const GroupDetail = ({ group: initGroup, onBack, onDelete }) => {
   const { user } = useAuth();
+
+  // ── Resolve the current user's ID reliably ─────────────────────────────
+  // AuthContext may store it as user._id, user.id, or user.data._id
+  // depending on how the login response was parsed.
+  const resolveMyId = (u) => {
+    if (!u) return '';
+    const raw = u._id ?? u.id ?? u.userId ?? '';
+    return String(raw).trim();
+  };
+  const MY_ID = resolveMyId(user);
+
+  // DEV DEBUG — remove after confirming fix
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[GroupDetail] user object:', JSON.stringify(user));
+    console.log('[GroupDetail] resolved MY_ID:', MY_ID);
+  }
   const [group,    setGroup]    = useState(initGroup);
   const [splits,   setSplits]   = useState([]);
   const [balances, setBalances] = useState(null);
@@ -1248,10 +1279,13 @@ const GroupDetail = ({ group: initGroup, onBack, onDelete }) => {
         api.get(`/groups/${group._id}`),
       ]);
       setSplits(sp.data?.data?.splits ?? sp.data?.splits ?? []);
+
+      // ── API returns: { success, data: { myBalance, iOwe, owedToMe, allDebts, netBalances } }
       const bal = ba.data?.data ?? ba.data ?? null;
       setBalances(bal);
+
       const grp = gr.data?.data?.group ?? gr.data?.group ?? initGroup;
-      setGroup(prev => ({ ...prev, ...grp, _balances: bal }));
+      setGroup(prev => ({ ...prev, ...grp }));
     } catch {
       toast.error('Failed to load group data');
     } finally { setLoading(false); }
@@ -1349,8 +1383,6 @@ const GroupDetail = ({ group: initGroup, onBack, onDelete }) => {
     />
   );
 
-  // ✅ FIX: Always calculate total from actual splits — never use group.totalExpenses
-  // which can be negative due to a backend calculation bug.
   const totalSpent = splits.reduce((s, sp) => s + (sp.totalAmount || 0), 0);
 
   const totalsData = (() => {
@@ -1372,16 +1404,50 @@ const GroupDetail = ({ group: initGroup, onBack, onDelete }) => {
       .sort((a, b) => b.amount - a.amount);
   })();
 
-  const getSplitStatus = sp => {
-    const paid  = sp.paidBy?.toString() === user._id?.toString();
-    const share = sp.shares?.find(s => s.userId?.toString() === user._id?.toString());
-    if (paid) {
-      const own  = share?.amount || 0;
-      const lent = (sp.totalAmount || 0) - own;
-      return lent > 0 ? { type: 'lent', amount: lent } : { type: 'paid', amount: sp.totalAmount };
+  // ─── getSplitStatus ───────────────────────────────────────────────────────
+  const getSplitStatus = (sp) => {
+    if (!MY_ID) return { type: 'none', amount: 0 };
+
+    // My display name from group membership — ground truth for name fallbacks
+    const myMemberName = group.members
+      ?.find(m => String(m.userId ?? '').trim() === MY_ID)
+      ?.name?.trim().toLowerCase() ?? '';
+
+    // ── Am I the payer? ────────────────────────────────────────────────────
+    const iPaid =
+      String(sp.paidBy ?? '').trim() === MY_ID ||
+      (myMemberName && sp.paidByName?.trim().toLowerCase() === myMemberName);
+
+    // ── Find my share ──────────────────────────────────────────────────────
+    const myShare = (sp.shares ?? []).find(s => {
+      const sId = String(s.userId ?? '').trim();
+      if (sId) return sId === MY_ID;
+      return myMemberName && s.name?.trim().toLowerCase() === myMemberName;
+    });
+
+    // ── Return status ──────────────────────────────────────────────────────
+    if (iPaid) {
+      const unpaid = (sp.shares ?? []).filter(s => {
+        if (s.isPaid) return false;
+        const sId = String(s.userId ?? '').trim();
+        return sId ? sId !== MY_ID : s.name?.trim().toLowerCase() !== myMemberName;
+      });
+      if (unpaid.length > 0) {
+        const lent = unpaid.reduce((sum, s) => sum + (s.amount || 0), 0);
+        if (lent > 0.005) return { type: 'lent', amount: parseFloat(lent.toFixed(2)) };
+      }
+      const myAmt = myShare?.amount ?? (sp.totalAmount / Math.max((sp.shares ?? []).length, 1));
+      return { type: 'paid', amount: parseFloat(myAmt.toFixed(2)) };
     }
-    if (share) return { type: 'borrowed', amount: share.amount };
-    return       { type: 'none', amount: 0 };
+
+    if (myShare) {
+      if (!myShare.isPaid) {
+        return { type: 'borrowed', amount: parseFloat((myShare.amount || 0).toFixed(2)) };
+      }
+      return { type: 'settled', amount: parseFloat((myShare.amount || 0).toFixed(2)) };
+    }
+
+    return { type: 'none', amount: 0 };
   };
 
   return (
@@ -1391,7 +1457,6 @@ const GroupDetail = ({ group: initGroup, onBack, onDelete }) => {
           <button className="g-btn g-btn--ghost g-btn--sm" onClick={onBack}>← Back</button>
           <div>
             <h1 className="g-title">{TYPE_ICONS[group.type]} {group.name}</h1>
-            {/* ✅ FIX: Use totalSpent (summed from splits) instead of group.totalExpenses */}
             <p className="g-sub">{group.members?.length} members · {fmtShort(totalSpent)} total</p>
           </div>
         </div>
@@ -1430,8 +1495,23 @@ const GroupDetail = ({ group: initGroup, onBack, onDelete }) => {
             </div>
           ) : splits.map(sp => {
             const status = getSplitStatus(sp);
-            const pbn    = sp.paidByName || group.members?.find(m => m.userId?.toString() === sp.paidBy?.toString())?.name || 'Someone';
-            const iP     = sp.paidBy?.toString() === user._id?.toString();
+            // Resolve payer name: use stored paidByName, fallback to member lookup, then name-match
+            const pbn = sp.paidByName
+              || group.members?.find(m => m.userId?.toString() === sp.paidBy?.toString())?.name
+              || 'Someone';
+            const iP = String(sp.paidBy ?? '').trim() === MY_ID
+              || sp.paidByName?.trim().toLowerCase() === group.members?.find(m => String(m.userId ?? '').trim() === MY_ID)?.name?.trim().toLowerCase();
+
+            // ── Status display config ──────────────────────────────────────
+            const STATUS = {
+              lent:     { label: 'you lent',    color: '#22c55e' },
+              paid:     { label: 'you paid',     color: '#22c55e' },
+              settled:  { label: 'settled up',   color: '#22c55e' },
+              borrowed: { label: 'you owe',      color: '#f97316' },
+              none:     { label: 'not involved', color: 'rgba(255,255,255,0.28)' },
+            };
+            const s = STATUS[status.type] || STATUS.none;
+
             return (
               <div key={sp._id} className="sd-expense-row" onClick={() => setActiveSplit(sp)}>
                 <div className="sd-expense-row__date">
@@ -1447,11 +1527,15 @@ const GroupDetail = ({ group: initGroup, onBack, onDelete }) => {
                   <span className="sd-expense-row__title">{sp.title}</span>
                   <span className="sd-expense-row__sub">{iP ? 'You paid' : `${pbn} paid`} {fmt(sp.totalAmount)}</span>
                 </div>
-                <div className="sd-expense-row__status">
-                  {status.type === 'lent'     && <><span className="sd-status-label sd-status-label--lent">you lent</span><span className="sd-status-amt sd-status-amt--lent">{fmt(status.amount)}</span></>}
-                  {status.type === 'borrowed' && <><span className="sd-status-label sd-status-label--borrowed">you borrowed</span><span className="sd-status-amt sd-status-amt--borrowed">{fmt(status.amount)}</span></>}
-                  {status.type === 'paid'     && <><span className="sd-status-label sd-status-label--lent">you paid</span><span className="sd-status-amt sd-status-amt--lent">{fmt(status.amount)}</span></>}
-                  {status.type === 'none'     && <span className="sd-status-label sd-status-label--none">not involved</span>}
+                <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 90 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: s.color, marginBottom: 2 }}>
+                    {s.label}
+                  </div>
+                  {status.type !== 'none' && (
+                    <div style={{ fontSize: 14, fontWeight: 800, color: s.color }}>
+                      {fmt(status.amount)}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -1533,7 +1617,7 @@ const GroupDetail = ({ group: initGroup, onBack, onDelete }) => {
           group={group}
           currentUser={user}
           onClose={() => setShowSettings(false)}
-          onGroupUpdated={g => setGroup(prev => ({ ...prev, ...g, _balances: balances }))}
+          onGroupUpdated={g => setGroup(prev => ({ ...prev, ...g }))}
           onLeave={handleLeave}
           onDelete={handleDelete}
         />
